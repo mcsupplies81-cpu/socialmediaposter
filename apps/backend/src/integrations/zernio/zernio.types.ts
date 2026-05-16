@@ -1,22 +1,30 @@
 export type ZernioPlatform =
   | 'twitter'
-  | 'x'
   | 'tiktok'
   | 'instagram'
   | 'facebook'
-  | 'reddit';
+  | 'reddit'
+  | 'linkedin'
+  | 'youtube'
+  | 'bluesky'
+  | 'threads';
 
 export type ZernioMediaItem = {
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'document';
   url: string;
 };
 
+export type ZernioPlatformTarget = {
+  platform: ZernioPlatform;
+  accountId: string;
+};
+
 export type ZernioPublishPostRequest = {
-  platforms: ZernioPlatform[];
-  accountId?: string;
+  platforms: ZernioPlatformTarget[];
   content: string;
   mediaItems?: ZernioMediaItem[];
-  publishNow: boolean;
+  publishNow?: boolean;
+  scheduledFor?: string;
 };
 
 export type ZernioPostResponse = {
@@ -30,7 +38,7 @@ export type ZernioPostResponse = {
 export type ZernioConnectedAccount = {
   id: string;
   platform: ZernioPlatform;
-  name?: string;
+  displayName?: string;
   username?: string;
   [key: string]: unknown;
 };

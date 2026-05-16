@@ -252,7 +252,7 @@ export class PostActivity {
       ? await Promise.all(
           postDetails.map(async (postDetail) => {
             const response = await this._zernioService.publishPost({
-              platforms: [zernioPlatform as any],
+              platforms: [{ platform: zernioPlatform as any, accountId: integration.internalId }],
               content: postDetail.message,
               mediaItems: postDetail.media?.map((media) => ({
                 type: media.type,

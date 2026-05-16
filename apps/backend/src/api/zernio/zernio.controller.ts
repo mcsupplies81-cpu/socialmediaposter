@@ -27,8 +27,7 @@ export class ZernioController {
     @Body() body: ZernioTestPublishBody
   ): Promise<ZernioPostResponse> {
     return this._zernioService.publishPost({
-      platforms: [body.platform],
-      accountId: body.accountId,
+      platforms: [{ platform: body.platform, accountId: body.accountId }],
       content: body.content,
       publishNow: true,
     });
