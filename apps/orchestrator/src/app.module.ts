@@ -6,6 +6,7 @@ import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autop
 import { EmailActivity } from '@gitroom/orchestrator/activities/email.activity';
 import { IntegrationsActivity } from '@gitroom/orchestrator/activities/integrations.activity';
 import { HealthController } from '@gitroom/orchestrator/health.controller';
+import { ZernioModule } from '@gitroom/backend/integrations/zernio/zernio.module';
 
 const activities = [
   PostActivity,
@@ -16,6 +17,7 @@ const activities = [
 @Module({
   imports: [
     DatabaseModule,
+    ZernioModule,
     getTemporalModule(true, require.resolve('./workflows'), activities),
   ],
   controllers: [HealthController],

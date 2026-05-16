@@ -44,6 +44,8 @@ import { GoogleProvider } from '@gitroom/backend/services/auth/providers/google.
 import { FarcasterProvider } from '@gitroom/backend/services/auth/providers/farcaster.provider';
 import { WalletProvider } from '@gitroom/backend/services/auth/providers/wallet.provider';
 import { OauthProvider } from '@gitroom/backend/services/auth/providers/oauth.provider';
+import { ZernioController } from '@gitroom/backend/api/zernio/zernio.controller';
+import { ZernioModule } from '@gitroom/backend/integrations/zernio/zernio.module';
 
 const authenticatedController = [
   UsersController,
@@ -65,9 +67,10 @@ const authenticatedController = [
   OAuthAuthorizedController,
   AnnouncementsController,
   AdminController,
+  ZernioController,
 ];
 @Module({
-  imports: [UploadModule],
+  imports: [UploadModule, ZernioModule],
   controllers: [
     RootController,
     StripeController,
