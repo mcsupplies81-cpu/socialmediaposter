@@ -23,6 +23,7 @@ import {
   postId as postIdSearchParam,
 } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
+import { ZernioService } from '@gitroom/backend/integrations/zernio/zernio.service';
 
 // Drops fields the workflow and downstream activities never read — biggest wins are `error` (grows per retry) and `childrenPost` (Prisma side-loads it on every recursive row).
 function slimPost(post: any) {
@@ -62,7 +63,8 @@ export class PostActivity {
     private _refreshIntegrationService: RefreshIntegrationService,
     private _webhookService: WebhooksService,
     private _temporalService: TemporalService,
-    private _subscriptionService: SubscriptionService
+    private _subscriptionService: SubscriptionService,
+    private _zernioService: ZernioService
   ) {}
 
   @ActivityMethod()
@@ -220,30 +222,59 @@ export class PostActivity {
       posts
     );
 
-    const postNow = await getIntegration.post(
-      integration.internalId,
-      integration.token,
-      await Promise.all(
-        (newPosts || []).map(async (p) => ({
-          id: p.id,
-          message: stripHtmlValidation(
-            getIntegration.editor,
-            p.content,
-            true,
-            false,
-            !/<\/?[a-z][\s\S]*>/i.test(p.content),
-            getIntegration.mentionFormat
-          ),
-          settings: JSON.parse(p.settings || '{}'),
-          media: await this._postService.updateMedia(
-            p.id,
-            JSON.parse(p.image || '[]'),
-            getIntegration?.convertToJPEG || false
-          ),
-        }))
-      ),
-      integration
+    const postDetails = await Promise.all(
+      (newPosts || []).map(async (p) => ({
+        id: p.id,
+        message: stripHtmlValidation(
+          getIntegration.editor,
+          p.content,
+          true,
+          false,
+          !/<\/?[a-z][\s\S]*>/i.test(p.content),
+          getIntegration.mentionFormat
+        ),
+        settings: JSON.parse(p.settings || '{}'),
+        media: await this._postService.updateMedia(
+          p.id,
+          JSON.parse(p.image || '[]'),
+          getIntegration?.convertToJPEG || false
+        ),
+      }))
     );
+
+    const zernioPlatform =
+      integration.providerIdentifier === 'x'
+        ? 'twitter'
+        : integration.providerIdentifier;
+
+    const postNow = (integration as Integration & { useZernio?: boolean })
+      .useZernio
+      ? await Promise.all(
+          postDetails.map(async (postDetail) => {
+            const response = await this._zernioService.publishPost({
+              platforms: [{ platform: zernioPlatform as any, accountId: integration.internalId }],
+              content: postDetail.message,
+              mediaItems: postDetail.media?.map((media) => ({
+                type: media.type,
+                url: media.url || media.path,
+              })),
+              publishNow: true,
+            });
+
+            return {
+              id: postDetail.id,
+              postId: String(response.postId || response.id || ''),
+              releaseURL: String(response.releaseURL || ''),
+              status: String(response.status || 'published'),
+            };
+          })
+        )
+      : await getIntegration.post(
+          integration.internalId,
+          integration.token,
+          postDetails,
+          integration
+        );
 
     await this._temporalService.client
       .getRawClient()
